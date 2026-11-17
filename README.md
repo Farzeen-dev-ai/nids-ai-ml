@@ -38,3 +38,28 @@ Start the root dashboard server:
 python main.py
 ```
 Open [http://localhost:8050](http://localhost:8050) in your browser.
+
+
+## Project 2 Architecture: scikit-learn ML Pipeline
+
+Project 2 trains a binary classifier (benign vs attack) on the Project 1 data.
+
+- Data: 28,420 flows, 77 numeric features, stratified 80/20 split (22,736 train, 5,684 test).
+- Pipeline: SimpleImputer (median) -> StandardScaler -> RandomForestClassifier.
+- Tuning: GridSearchCV with 5-fold StratifiedKFold, 24 combinations (120 fits), scored on F1.
+- Results (held-out test set): Accuracy 99.84%, Precision 99.91%, Recall 99.27%, F1 99.59%, ROC-AUC 0.9999.
+- Note: scores are very high because Project 1 sampled contiguous batches, so similar rows can appear in both train and test.
+
+### Run the dashboard only
+pip install -r requirements-dev.txt
+python main.py
+Open http://localhost:8050 and click the "ML Evaluation" tab.
+
+### Rebuild the model (optional, takes about 3 minutes)
+python -m ml.train
+python -m ml.evaluate
+
+The trained model (models/nids_pipeline.joblib) is not on GitHub because of its size. Running `python -m ml.train` creates it.
+
+If you want to rebuild the training database too, copy data/nids_full.db into the data folder and run:
+python -m ml.export_train_db
