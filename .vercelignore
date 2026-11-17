@@ -1,0 +1,3 @@
+data/nids_full.db
+data/nids_train.db
+models/

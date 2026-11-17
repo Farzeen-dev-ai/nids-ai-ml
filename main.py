@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "data" / "nids_deploy.db"
 STATIC_DIR = BASE_DIR / "static"
+EVAL_REPORT_PATH = BASE_DIR / "data" / "ml_evaluation_report.json"
+CV_SUMMARY_PATH = BASE_DIR / "data" / "ml_cv_summary.json"
 
 app = FastAPI(
     title="NIDS Dashboard",
@@ -132,6 +134,39 @@ def get_scatter_sample() -> List[Dict[str, Any]]:
         return rows
     except Exception:
         return []
+
+
+@app.get("/api/ml/metrics")
+def get_ml_metrics() -> Dict[str, Any]:
+    """
+    Returns Phase 2 machine learning evaluation report and cross-validation summary.
+    Directly loads data/ml_evaluation_report.json and data/ml_cv_summary.json.
+    Excludes scikit-learn and joblib dependencies to preserve lightweight serverless deployment.
+    """
+    if not EVAL_REPORT_PATH.exists():
+        return {
+            "ready": False,
+            "message": "ML evaluation report (data/ml_evaluation_report.json) not found. Run ML training and evaluation pipelines first."
+        }
+
+    try:
+        with open(EVAL_REPORT_PATH, "r", encoding="utf-8") as f:
+            report_data = json.load(f)
+
+        cv_summary = {}
+        if CV_SUMMARY_PATH.exists():
+            with open(CV_SUMMARY_PATH, "r", encoding="utf-8") as f:
+                cv_summary = json.load(f)
+
+        response = dict(report_data)
+        response["cv_summary"] = cv_summary
+        response["ready"] = True
+        return response
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load ML evaluation report: {str(e)}"
+        )
 
 
 # Mount static assets directory

@@ -119,7 +119,8 @@ async function initDashboard() {
   await Promise.all([
     renderClassDistribution(),
     renderCorrelationHeatmap(),
-    renderVolumetricScatter()
+    renderVolumetricScatter(),
+    initMlDashboard()
   ]);
 }
 
@@ -379,12 +380,190 @@ async function renderVolumetricScatter() {
   }, PLOTLY_CONFIG);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   PHASE 2: ML EVALUATION DASHBOARD & PIPELINE TAB CONTROLLER
+   ══════════════════════════════════════════════════════════════════════ */
+
+window.switchPipelineTab = function(tab) {
+  const panelEda = el('panelEda');
+  const panelMl = el('panelMl');
+  const btnEda = el('tabBtnEda');
+  const btnMl = el('tabBtnMl');
+
+  if (tab === 'eda') {
+    if (panelEda) panelEda.style.display = 'block';
+    if (panelMl) panelMl.style.display = 'none';
+    if (btnEda) btnEda.classList.add('active');
+    if (btnMl) btnMl.classList.remove('active');
+    ['chartBinaryDist', 'chartAttackBreakdown', 'chartCorrelationHeatmap', 'chartVolumetricScatter'].forEach(id => {
+      const node = document.getElementById(id);
+      if (node && node.data) Plotly.Plots.resize(node);
+    });
+  } else {
+    if (panelEda) panelEda.style.display = 'none';
+    if (panelMl) panelMl.style.display = 'block';
+    if (btnEda) btnEda.classList.remove('active');
+    if (btnMl) btnMl.classList.add('active');
+    ['chartMlRocCurve', 'chartMlFeatureImportance'].forEach(id => {
+      const node = document.getElementById(id);
+      if (node && node.data) Plotly.Plots.resize(node);
+    });
+  }
+};
+
+async function initMlDashboard() {
+  const data = await fetchJSON('/api/ml/metrics');
+  if (!data || !data.ready) {
+    console.warn('[ML Dashboard] Evaluation metrics pending or not available yet.');
+    return;
+  }
+
+  const metrics = data.metrics || {};
+  const cm = data.confusion_matrix || {};
+  const bestParams = data.best_params || {};
+
+  /* 1. KPI Cards */
+  if (el('mlValAccuracy'))  el('mlValAccuracy').textContent  = `${((metrics.accuracy || 0) * 100).toFixed(2)}%`;
+  if (el('mlValPrecision')) el('mlValPrecision').textContent = `${((metrics.precision || 0) * 100).toFixed(2)}%`;
+  if (el('mlValRecall'))    el('mlValRecall').textContent    = `${((metrics.recall || 0) * 100).toFixed(2)}%`;
+  if (el('mlValF1'))        el('mlValF1').textContent        = `${((metrics.f1 || 0) * 100).toFixed(2)}%`;
+  if (el('mlValCvF1'))      el('mlValCvF1').textContent      = `${((data.best_cv_f1 || 0) * 100).toFixed(2)}%`;
+  if (el('mlValRocAuc'))    el('mlValRocAuc').textContent    = (metrics.roc_auc || 0).toFixed(4);
+  if (el('mlValPrAuc'))     el('mlValPrAuc').textContent     = (metrics.pr_auc || 0).toFixed(4);
+
+  /* 2. Confusion Matrix */
+  if (el('cmValTN')) el('cmValTN').textContent = fmt(cm.tn);
+  if (el('cmValFP')) el('cmValFP').textContent = fmt(cm.fp);
+  if (el('cmValFN')) el('cmValFN').textContent = fmt(cm.fn);
+  if (el('cmValTP')) el('cmValTP').textContent = fmt(cm.tp);
+
+  if (el('cmTotalFlows'))   el('cmTotalFlows').textContent   = fmt(data.n_test || 5684);
+  if (el('cmActualBenign')) el('cmActualBenign').textContent = fmt((cm.tn || 0) + (cm.fp || 0));
+  if (el('cmActualAttack')) el('cmActualAttack').textContent = fmt((cm.tp || 0) + (cm.fn || 0));
+
+  /* 3. ROC Curve Chart */
+  if (data.roc_curve && data.roc_curve.fpr && data.roc_curve.tpr) {
+    if (el('rocBadgeAuc')) el('rocBadgeAuc').textContent = (metrics.roc_auc || 0).toFixed(4);
+
+    const rocTrace = {
+      x: data.roc_curve.fpr,
+      y: data.roc_curve.tpr,
+      mode: 'lines',
+      name: `Random Forest (AUC = ${(metrics.roc_auc || 0).toFixed(4)})`,
+      line: {
+        color: '#8b5cf6',
+        width: 3,
+        shape: 'spline'
+      },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(139, 92, 246, 0.12)',
+      hovertemplate: 'FPR: %{x:.4f}<br>TPR: %{y:.4f}<extra></extra>'
+    };
+
+    const baselineTrace = {
+      x: [0, 1],
+      y: [0, 1],
+      mode: 'lines',
+      name: 'Random Guess (AUC = 0.50)',
+      line: {
+        dash: 'dash',
+        color: 'rgba(255, 255, 255, 0.25)',
+        width: 1.5
+      },
+      hoverinfo: 'none'
+    };
+
+    Plotly.newPlot('chartMlRocCurve', [baselineTrace, rocTrace], {
+      ...DARK_LAYOUT,
+      margin: { t: 20, r: 20, b: 50, l: 60 },
+      xaxis: {
+        title: { text: 'False Positive Rate (FPR)', font: { size: 11, color: '#8c96a8' } },
+        range: [-0.02, 1.02],
+        gridcolor: GRID_COLOR,
+        zerolinecolor: ZERO_COLOR,
+        tickfont: { color: '#8c96a8', size: 10 }
+      },
+      yaxis: {
+        title: { text: 'True Positive Rate (Recall / TPR)', font: { size: 11, color: '#8c96a8' } },
+        range: [-0.02, 1.02],
+        gridcolor: GRID_COLOR,
+        zerolinecolor: ZERO_COLOR,
+        tickfont: { color: '#8c96a8', size: 10 }
+      },
+      legend: {
+        x: 0.35,
+        y: 0.12,
+        font: { color: '#cbd5e1', size: 11 },
+        bgcolor: 'rgba(20, 22, 28, 0.7)'
+      }
+    }, PLOTLY_CONFIG);
+  }
+
+  /* 4. Top-20 Gini Feature Importance Horizontal Bar Chart */
+  if (data.top_features && data.top_features.length > 0) {
+    if (el('mlFeatureCountBadge')) el('mlFeatureCountBadge').textContent = data.num_features || 77;
+
+    // Reverse array so rank 1 appears at the top of horizontal bar chart
+    const reversed = data.top_features.slice().reverse();
+    const xVals = reversed.map(f => f.importance);
+    const yVals = reversed.map(f => f.feature);
+
+    const barTrace = {
+      x: xVals,
+      y: yVals,
+      type: 'bar',
+      orientation: 'h',
+      marker: {
+        color: xVals,
+        colorscale: [
+          [0.0, '#0284c7'],
+          [0.5, '#06b6d4'],
+          [1.0, '#10b981']
+        ],
+        line: {
+          color: 'rgba(255, 255, 255, 0.12)',
+          width: 1
+        }
+      },
+      hovertemplate: '<b>%{y}</b><br>Gini Importance: %{x:.6f}<extra></extra>'
+    };
+
+    Plotly.newPlot('chartMlFeatureImportance', [barTrace], {
+      ...DARK_LAYOUT,
+      margin: { t: 20, r: 30, b: 50, l: 200 },
+      xaxis: {
+        title: { text: 'Mean Decrease in Impurity (Gini Importance)', font: { size: 11, color: '#8c96a8' } },
+        gridcolor: GRID_COLOR,
+        zerolinecolor: ZERO_COLOR,
+        tickfont: { color: '#8c96a8', size: 10 }
+      },
+      yaxis: {
+        tickfont: { color: '#cbd5e1', size: 11, family: 'JetBrains Mono, monospace' },
+        automargin: true
+      }
+    }, PLOTLY_CONFIG);
+  }
+
+  /* 5. Hyperparameter Badges & Methodology Note */
+  if (el('hpEstimators')) el('hpEstimators').textContent = `n_estimators: ${bestParams.classifier__n_estimators ?? 100}`;
+  if (el('hpDepth'))      el('hpDepth').textContent      = `max_depth: ${bestParams.classifier__max_depth ?? 'None'}`;
+  if (el('hpSplit'))      el('hpSplit').textContent      = `min_samples_split: ${bestParams.classifier__min_samples_split ?? 2}`;
+  if (el('hpWeight'))     el('hpWeight').textContent     = `class_weight: ${bestParams.classifier__class_weight ?? 'balanced'}`;
+  if (el('hpCvF1'))       el('hpCvF1').textContent       = `CV F1: ${((data.best_cv_f1 || 0) * 100).toFixed(2)}%`;
+
+  if (el('mlMethodologyNoteText') && data.methodological_note) {
+    el('mlMethodologyNoteText').textContent = data.methodological_note;
+  }
+}
+
 /* ── Responsive Reflow on Resize ────────────────────────────────────────── */
 const CHART_CONTAINERS = [
   'chartBinaryDist',
   'chartAttackBreakdown',
   'chartCorrelationHeatmap',
-  'chartVolumetricScatter'
+  'chartVolumetricScatter',
+  'chartMlRocCurve',
+  'chartMlFeatureImportance'
 ];
 
 window.addEventListener('resize', () => {

@@ -78,6 +78,34 @@
     </div>
 
     <!-- ====================================================================
+         PIPELINE STAGE TABS (Phase 1 EDA vs Phase 2 ML Evaluation)
+         ==================================================================== -->
+    <nav class="pipeline-tabs animate-card">
+      <button class="pipeline-tab-btn active" id="tabBtnEda" onclick="switchPipelineTab('eda')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>1. EDA Intelligence</span>
+        <span class="pill pill-neutral">CLO2</span>
+      </button>
+
+      <button class="pipeline-tab-btn" id="tabBtnMl" onclick="switchPipelineTab('ml')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+        <span>2. ML Evaluation</span>
+        <span class="pill pill-cyan">CLO3 &bull; Random Forest</span>
+      </button>
+    </nav>
+
+    <!-- ====================================================================
+         PHASE 1: EDA INTELLIGENCE PANEL
+         ==================================================================== -->
+    <div id="panelEda">
+
+    <!-- ====================================================================
          2. ASYMMETRIC BENTO GRID (True HorizonX Layout)
          ==================================================================== -->
     <section class="bento-kpi-grid">
@@ -272,6 +300,272 @@
         </div>
       </div>
     </article>
+
+    </div><!-- /panelEda -->
+
+    <!-- ====================================================================
+         PHASE 2: ML EVALUATION DASHBOARD PANEL
+         ==================================================================== -->
+    <div id="panelMl" style="display: none;">
+
+      <!-- ML Metrics KPI Grid (6 metrics) -->
+      <section class="ml-kpi-grid">
+
+        <!-- Accuracy -->
+        <article class="bento-card animate-card">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">Accuracy</span>
+              <span class="pill pill-neutral">TEST SET</span>
+            </div>
+            <div class="kpi-metric-standard emerald" id="mlValAccuracy">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet emerald"></span>
+              <span>Overall Correct Baseline</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Precision -->
+        <article class="bento-card animate-card">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">Precision</span>
+              <span class="pill pill-emerald">MIN FP</span>
+            </div>
+            <div class="kpi-metric-standard emerald" id="mlValPrecision">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet emerald"></span>
+              <span>Low Alert Fatigue (1 FP)</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Recall -->
+        <article class="bento-card animate-card">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">Recall</span>
+              <span class="pill pill-cyan">DETECTION</span>
+            </div>
+            <div class="kpi-metric-standard cyan" id="mlValRecall">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet cyan"></span>
+              <span>Intrusion Intercept Rate</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- F1-Score (Refit Metric) -->
+        <article class="bento-card animate-card" style="border-color: rgba(6, 182, 212, 0.4);">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">F1-Score</span>
+              <span class="pill pill-cyan">REFIT METRIC</span>
+            </div>
+            <div class="kpi-metric-standard cyan" id="mlValF1">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet cyan"></span>
+              <span>CV F1: <strong id="mlValCvF1">—</strong></span>
+            </div>
+          </div>
+        </article>
+
+        <!-- ROC-AUC -->
+        <article class="bento-card animate-card">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">ROC-AUC</span>
+              <span class="pill pill-purple">RANKING</span>
+            </div>
+            <div class="kpi-metric-standard purple" id="mlValRocAuc">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet purple"></span>
+              <span>Threshold-Free Quality</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- PR-AUC -->
+        <article class="bento-card animate-card">
+          <div class="bento-inner" style="padding:16px;">
+            <div class="kpi-card-header">
+              <span class="kpi-label">PR-AUC</span>
+              <span class="pill pill-purple">IMBALANCE</span>
+            </div>
+            <div class="kpi-metric-standard purple" id="mlValPrAuc">—</div>
+            <div class="kpi-compact-footer">
+              <span class="footer-bullet purple"></span>
+              <span>Precision-Recall Area</span>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ML Row 1: Confusion Matrix Breakdown (5fr) + ROC Curve (7fr) -->
+      <section class="charts-dual-grid" style="margin-bottom: 22px;">
+
+        <!-- Confusion Matrix Breakdown Card -->
+        <article class="bento-card chart-card animate-card">
+          <div class="bento-inner">
+            <div class="chart-header">
+              <div class="chart-title-area">
+                <div class="chart-title-row">
+                  <h2 class="chart-title">Confusion Matrix Breakdown</h2>
+                  <span class="pill pill-cyan">N = 5,684 Held-Out</span>
+                </div>
+                <p class="chart-desc">Empirical outcomes on strictly sequestered 20% test partition.</p>
+              </div>
+            </div>
+
+            <div class="confusion-matrix-wrapper">
+              <div class="cm-grid">
+                <!-- True Negative -->
+                <div class="cm-cell tn">
+                  <div class="cm-header">
+                    <span class="cm-title">True Negative (TN)</span>
+                    <span class="pill pill-emerald">CORRECT</span>
+                  </div>
+                  <div class="cm-val emerald" id="cmValTN">—</div>
+                  <div class="cm-desc">Benign traffic correctly allowed</div>
+                </div>
+
+                <!-- False Positive -->
+                <div class="cm-cell fp">
+                  <div class="cm-header">
+                    <span class="cm-title">False Positive (FP)</span>
+                    <span class="pill pill-amber">TYPE I ERROR</span>
+                  </div>
+                  <div class="cm-val amber" id="cmValFP">—</div>
+                  <div class="cm-desc">Benign traffic incorrectly blocked</div>
+                </div>
+
+                <!-- False Negative -->
+                <div class="cm-cell fn">
+                  <div class="cm-header">
+                    <span class="cm-title">False Negative (FN)</span>
+                    <span class="pill pill-rose">TYPE II ERROR</span>
+                  </div>
+                  <div class="cm-val rose" id="cmValFN">—</div>
+                  <div class="cm-desc">Attacks missed (Security risk)</div>
+                </div>
+
+                <!-- True Positive -->
+                <div class="cm-cell tp">
+                  <div class="cm-header">
+                    <span class="cm-title">True Positive (TP)</span>
+                    <span class="pill pill-cyan">INTERCEPTED</span>
+                  </div>
+                  <div class="cm-val cyan" id="cmValTP">—</div>
+                  <div class="cm-desc">Intrusions accurately detected</div>
+                </div>
+              </div>
+
+              <div class="cm-footer-breakdown">
+                <span>Held-out Total: <strong id="cmTotalFlows">5,684</strong> flows</span>
+                <span>Actual Benign: <strong id="cmActualBenign">4,586</strong></span>
+                <span>Actual Attack: <strong id="cmActualAttack">1,098</strong></span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- ROC Curve Visualization -->
+        <article class="bento-card chart-card animate-card">
+          <div class="bento-inner">
+            <div class="chart-header">
+              <div class="chart-title-area">
+                <div class="chart-title-row">
+                  <h2 class="chart-title">Receiver Operating Characteristic (ROC)</h2>
+                  <span class="pill pill-purple">AUC = <span id="rocBadgeAuc">0.9999</span></span>
+                </div>
+                <p class="chart-desc">TPR vs. FPR across downsampled decision thresholds.</p>
+              </div>
+            </div>
+            <div id="chartMlRocCurve" style="width:100%;height:330px;"></div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ML Row 2: Top-20 Gini Feature Importance Chart -->
+      <article class="bento-card chart-card-full animate-card" style="margin-bottom: 22px;">
+        <div class="bento-inner">
+          <div class="chart-header">
+            <div class="chart-title-area">
+              <div class="chart-title-row">
+                <h2 class="chart-title">Top-20 Gini Feature Importances</h2>
+                <span class="pill pill-cyan">RandomForestClassifier</span>
+              </div>
+              <p class="chart-desc">
+                Relative contribution of top network flow features to malicious threat discrimination.
+              </p>
+            </div>
+            <div class="chart-meta-badge">
+              <span>Features Discovered:</span>
+              <span class="meta-val" id="mlFeatureCountBadge">77</span>
+            </div>
+          </div>
+          <div class="chart-scroll-wrap">
+            <div id="chartMlFeatureImportance" style="width:100%;min-width:700px;height:540px;"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ML Row 3: Hyperparameter Tuning Architecture & Sampling Limitation Note -->
+      <article class="bento-card chart-card-full animate-card" style="margin-bottom: 22px;">
+        <div class="bento-inner">
+          <div class="chart-header">
+            <div class="chart-title-area">
+              <div class="chart-title-row">
+                <h2 class="chart-title">Pipeline Architecture &amp; Methodology</h2>
+                <span class="pill pill-neutral">CLO3 Specification</span>
+              </div>
+              <p class="chart-desc">Cross-validation configuration, best hyperparameters, and sampling context.</p>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <!-- Hyperparameters Pill Grid -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+              <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">Best Hyperparameters:</span>
+              <span class="pill pill-cyan" id="hpEstimators">n_estimators: 100</span>
+              <span class="pill pill-cyan" id="hpDepth">max_depth: None</span>
+              <span class="pill pill-cyan" id="hpSplit">min_samples_split: 2</span>
+              <span class="pill pill-cyan" id="hpWeight">class_weight: balanced</span>
+              <span class="pill pill-emerald" id="hpCvF1">CV F1: 0.9957</span>
+            </div>
+
+            <!-- Pipeline Step Flow -->
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;background:var(--bg-card-inner);border:1px solid var(--border-card);border-radius:var(--radius-sm);">
+              <span style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">Unified Pipeline:</span>
+              <span class="pill pill-neutral">1. SimpleImputer (median, keep_empty_features=True)</span>
+              <span style="color:var(--text-muted);">&rarr;</span>
+              <span class="pill pill-neutral">2. StandardScaler (z-score)</span>
+              <span style="color:var(--text-muted);">&rarr;</span>
+              <span class="pill pill-cyan">3. RandomForestClassifier (100 trees, balanced)</span>
+            </div>
+
+            <!-- Sampling Limitation Callout -->
+            <div class="methodology-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <div>
+                <strong style="color:var(--accent-amber);">Methodological Note on Contiguous Batch Sampling:</strong>
+                <p id="mlMethodologyNoteText" style="margin-top:4px;">
+                  Phase 1 extracted 300 evenly spaced offsets of 100 contiguous rows each across the 2.83M-row dataset. Because adjacent packets within a 100-row contiguous batch can belong to the same network session or temporal burst, row-level stratified splitting can place temporally adjacent flows across both train and test partitions, which may inflate tree-ensemble test metrics.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div><!-- /panelMl -->
 
     <!-- ====================================================================
          6. COMPACT MINIMAL FOOTER
