@@ -1,0 +1,13 @@
+__pycache__/
+.venv/
+*.pyc
+.env
+data/raw/
+data/raw_json/
+data/nids_full.db
+PROJECT_NOTES.md
+*.pdf
+*.tex
+.agents
+logs/
+models/*.joblib
